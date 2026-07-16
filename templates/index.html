@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CornDiseaseAI — Deteksi Penyakit Daun Jagung Berbasis AI</title>
+<meta name="description" content="Identifikasi penyakit daun jagung secara otomatis menggunakan Custom Convolutional Neural Network dan Computer Vision." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body data-theme="light">
+
+<!-- ==================== LOADING SCREEN ==================== -->
+<div id="loadingScreen" class="loading-screen">
+    <div class="loading-mark">
+        <i class="fa-solid fa-leaf"></i>
+    </div>
+    <p class="loading-text">Menyiapkan CornDiseaseAI...</p>
+</div>
+
+<!-- ==================== TOAST CONTAINER ==================== -->
+<div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+<!-- ==================== NAVBAR ==================== -->
+<header class="navbar" id="navbar">
+    <div class="navbar-inner">
+        <a href="#top" class="brand">
+            <span class="brand-mark"><i class="fa-solid fa-leaf"></i></span>
+            <span class="brand-name">CornDisease<span class="brand-accent">AI</span></span>
+        </a>
+
+        <nav class="nav-links">
+            <a href="#upload-section">Deteksi</a>
+            <a href="#about-section">Tentang Model</a>
+            <a href="#detail-section">Detail Penyakit</a>
+        </nav>
+
+        <button id="themeToggle" class="icon-btn" type="button" aria-label="Ubah mode tampilan">
+            <i class="fa-solid fa-moon"></i>
+        </button>
+    </div>
+</header>
+
+<main id="top">
+
+    <!-- ==================== HERO SECTION ==================== -->
+    <section class="hero">
+        <div class="hero-glow"></div>
+        <div class="hero-content">
+            <span class="eyebrow"><i class="fa-solid fa-microchip"></i> Custom CNN &middot; 98.38% Akurasi</span>
+            <h1 class="hero-title">
+                Kenali Penyakit Daun Jagung <br class="only-desktop">
+                Dalam <span class="text-gradient">Hitungan Detik</span>
+            </h1>
+            <p class="hero-subtitle">
+                Unggah atau ambil foto daun jagung, dan biarkan model Convolutional Neural
+                Network yang telah dilatih khusus mendeteksi <strong>Healthy</strong>,
+                <strong>Common Rust</strong>, <strong>Gray Leaf Spot</strong>, dan
+                <strong>Northern Leaf Blight</strong> secara otomatis.
+            </p>
+            <div class="hero-actions">
+                <a href="#upload-section" class="btn btn-primary ripple">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Mulai Deteksi
+                </a>
+                <a href="#about-section" class="btn btn-ghost ripple">
+                    Pelajari Modelnya
+                </a>
+            </div>
+
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="hero-stat-value">98.38%</span>
+                    <span class="hero-stat-label">Akurasi Model</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-value">4</span>
+                    <span class="hero-stat-label">Kelas Penyakit</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-value">156×156</span>
+                    <span class="hero-stat-label">Resolusi Input</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== UPLOAD SECTION ==================== -->
+    <section class="section" id="upload-section">
+        <div class="section-head">
+            <span class="section-eyebrow">Langkah 1</span>
+            <h2>Unggah atau Ambil Foto Daun Jagung</h2>
+            <p>Format yang didukung: PNG, JPG, JPEG, WEBP &middot; Maksimal 20 MB</p>
+        </div>
+
+        <div class="input-grid">
+            <!-- Upload Card -->
+            <div class="glass-card upload-card" id="dropZone">
+                <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.webp" hidden>
+                <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                <h3>Seret &amp; Lepas Gambar</h3>
+                <p>atau klik untuk memilih file dari perangkat Anda</p>
+                <button type="button" class="btn btn-primary ripple" id="browseBtn">
+                    <i class="fa-solid fa-folder-open"></i> Pilih Gambar
+                </button>
+            </div>
+
+            <!-- Camera Card -->
+            <div class="glass-card camera-card">
+                <div class="camera-viewport" id="cameraViewport">
+                    <video id="cameraStream" autoplay playsinline></video>
+                    <div class="camera-placeholder" id="cameraPlaceholder">
+                        <i class="fa-solid fa-camera"></i>
+                        <p>Kamera belum aktif</p>
+                    </div>
+                </div>
+                <canvas id="captureCanvas" hidden></canvas>
+                <div class="camera-actions">
+                    <button type="button" class="btn btn-secondary ripple" id="openCameraBtn">
+                        <i class="fa-solid fa-video"></i> Buka Kamera
+                    </button>
+                    <button type="button" class="btn btn-primary ripple" id="captureBtn" disabled>
+                        <i class="fa-solid fa-circle-dot"></i> Ambil Foto
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="glass-card preview-card" id="previewCard" hidden>
+            <div class="preview-head">
+                <h3><i class="fa-solid fa-image"></i> Preview Gambar</h3>
+                <button type="button" class="btn-text" id="clearPreviewBtn">
+                    <i class="fa-solid fa-xmark"></i> Hapus
+                </button>
+            </div>
+            <div class="preview-body">
+                <img id="previewImage" alt="Preview gambar daun jagung">
+            </div>
+            <button type="button" class="btn btn-primary btn-lg ripple" id="detectBtn">
+                <i class="fa-solid fa-brain"></i> Deteksi Penyakit Sekarang
+            </button>
+        </div>
+
+        <!-- Results -->
+        <div class="results-wrapper" id="resultsWrapper" hidden>
+
+            <div class="glass-card result-card">
+                <div class="preview-head">
+                    <h3><i class="fa-solid fa-object-group"></i> Hasil Deteksi</h3>
+                    <span class="badge" id="predictionTimeBadge">0 ms</span>
+                </div>
+                <div class="preview-body">
+                    <img id="resultImage" alt="Hasil deteksi dengan bounding box">
+                </div>
+            </div>
+
+            <div class="glass-card summary-card">
+                <h3><i class="fa-solid fa-chart-simple"></i> Ringkasan Deteksi</h3>
+                <div class="summary-grid" id="summaryGrid"></div>
+                <div class="summary-footer">
+                    <div class="summary-footer-item">
+                        <span class="label">Total Daun</span>
+                        <span class="value" id="leafCountValue">0</span>
+                    </div>
+                    <div class="summary-footer-item">
+                        <span class="label">Confidence Rata-rata</span>
+                        <span class="value" id="avgConfidenceValue">0%</span>
+                    </div>
+                    <div class="summary-footer-item">
+                        <span class="label">Waktu Prediksi</span>
+                        <span class="value" id="predictionTimeValue">0 ms</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card detail-card" id="detail-section">
+                <h3><i class="fa-solid fa-file-waveform"></i> Detail Setiap Daun</h3>
+                <div class="detail-list" id="detailList"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== ABOUT MODEL SECTION ==================== -->
+    <section class="section section-alt" id="about-section">
+        <div class="section-head">
+            <span class="section-eyebrow">Di Balik Layar</span>
+            <h2>Bagaimana Sistem Ini Bekerja</h2>
+            <p>Kombinasi Computer Vision dan Custom CNN untuk deteksi multi-daun dalam satu gambar</p>
+        </div>
+
+        <div class="pipeline-grid">
+            <div class="pipeline-step">
+                <div class="pipeline-icon"><i class="fa-solid fa-image"></i></div>
+                <h4>1. Segmentasi OpenCV</h4>
+                <p>Gaussian Blur, konversi HSV, thresholding, dan morphology untuk memisahkan area daun dari latar belakang.</p>
+            </div>
+            <div class="pipeline-step">
+                <div class="pipeline-icon"><i class="fa-solid fa-draw-polygon"></i></div>
+                <h4>2. Contour Detection</h4>
+                <p>Setiap kontur yang valid dianggap sebagai satu daun, lalu di-crop secara individual.</p>
+            </div>
+            <div class="pipeline-step">
+                <div class="pipeline-icon"><i class="fa-solid fa-brain"></i></div>
+                <h4>3. Klasifikasi CNN</h4>
+                <p>Setiap crop di-resize ke 156×156, dinormalisasi, lalu diklasifikasikan oleh Custom CNN dengan akurasi 98.38%.</p>
+            </div>
+            <div class="pipeline-step">
+                <div class="pipeline-icon"><i class="fa-solid fa-vector-square"></i></div>
+                <h4>4. Bounding Box</h4>
+                <p>Hasil klasifikasi digambar kembali sebagai bounding box berwarna beserta label dan confidence.</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="footer">
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <span class="brand-mark"><i class="fa-solid fa-leaf"></i></span>
+            <span class="brand-name">CornDisease<span class="brand-accent">AI</span></span>
+        </div>
+        <p class="footer-text">
+            Dikembangkan sebagai implementasi penelitian skripsi &mdash; sistem identifikasi
+            penyakit daun jagung menggunakan Custom Convolutional Neural Network.
+        </p>
+        <p class="footer-copyright">&copy; <span id="currentYear"></span> CornDiseaseAI. Dibangun dengan Flask, OpenCV &amp; TensorFlow.</p>
+    </div>
+</footer>
+
+<!-- ==================== BACK TO TOP ==================== -->
+<button id="backToTop" class="back-to-top" type="button" aria-label="Kembali ke atas">
+    <i class="fa-solid fa-arrow-up"></i>
+</button>
+
+<script>
+    // Diteruskan dari backend agar frontend tahu status model sejak awal
+    window.__MODEL_READY__ = {{ 'true' if model_ready else 'false' }};
+</script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
